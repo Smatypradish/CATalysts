@@ -112,6 +112,10 @@ python smoke_test.py
 | OP1002 | 1002 | Expert |
 | OP1003 | 1003 | Beginner |
 
+Every operator has their own machine and scheduled tasks, so you can switch logins
+mid-demo: OP1001 → EXC001 (tasks D001–D004), OP1002 → EXC002 (D005–D007),
+OP1003 → LOD001 (D008–D010).
+
 ## 14-step demo workflow
 
 1. Log in as **OP1001 / 1001**.

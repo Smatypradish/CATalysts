@@ -54,10 +54,15 @@ def dashboard(operator_id: str, db: Session = Depends(get_db)):
                                         m.age_years if m else 3.0)
             delta = p["predicted_time_min"] - t0.estimated_time
             if delta > 3:
+                causes = []
+                if t0.weather != "Sunny":
+                    causes.append(f"{t0.weather} weather")
+                if op.skill != "Expert":
+                    causes.append(f"{op.skill} skill level")
+                reason = (" mainly due to " + " and ".join(causes)) if causes else ""
                 insights.append(f"Next task {t0.task_code} ({t0.task_type}) is likely to "
                                 f"take ~{p['predicted_time_min']:.0f} min, about "
-                                f"{delta:.0f} min longer than the planner estimate, mainly "
-                                f"due to {t0.weather} weather.")
+                                f"{delta:.0f} min longer than the planner estimate{reason}.")
             else:
                 insights.append(f"Next task {t0.task_code} ({t0.task_type}) looks on plan "
                                 f"at ~{p['predicted_time_min']:.0f} min.")

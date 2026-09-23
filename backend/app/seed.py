@@ -61,17 +61,20 @@ def reset_and_seed():
             proximity_m=None, source="dataset"))
 
     # Normal-behaviour baseline rows (simulated, labelled) so statistics are meaningful.
-    ts = datetime(2025, 4, 20, 8, 0)
-    eh = 1498.0
-    for _ in range(12):
-        ts += timedelta(hours=rng.choice([2, 3, 4]))
-        eh += rng.uniform(1.2, 2.4)
-        db.add(Telemetry(
-            timestamp=ts, machine_id="EXC001", operator_id="OP1001",
-            engine_hours=round(eh, 1), fuel_used=round(rng.uniform(4.0, 7.5), 1),
-            load_cycles=rng.randint(8, 16), idling_time=float(rng.randint(8, 28)),
-            seatbelt_status="Fastened", safety_alert_triggered="No",
-            proximity_m=None, source="simulated"))
+    for op_id, mac_id, eh0 in (("OP1001", "EXC001", 1498.0),
+                               ("OP1002", "EXC002", 4180.0),
+                               ("OP1003", "LOD001", 5860.0)):
+        ts = datetime(2025, 4, 20, 8, 0)
+        eh = eh0
+        for _ in range(12):
+            ts += timedelta(hours=rng.choice([2, 3, 4]))
+            eh += rng.uniform(1.2, 2.4)
+            db.add(Telemetry(
+                timestamp=ts, machine_id=mac_id, operator_id=op_id,
+                engine_hours=round(eh, 1), fuel_used=round(rng.uniform(4.0, 7.5), 1),
+                load_cycles=rng.randint(8, 16), idling_time=float(rng.randint(8, 28)),
+                seatbelt_status="Fastened", safety_alert_triggered="No",
+                proximity_m=None, source="simulated"))
 
     # ---- Dataset 2: load verbatim ----
     hdf = pd.read_csv(DATA_DIR / "task_records.csv")
@@ -115,10 +118,19 @@ def _seed_synthetic_history(db, rng):
 def _seed_demo_tasks_and_modules(db):
     today = date.today().isoformat()
     demo_tasks = [
+        # OP1001 - Arun Kumar (Intermediate, Excavator L2) - primary demo operator
         ("D001", "OP1001", "EXC001", "Earth Excavation", "Sunny",  "Site A - Zone 4", 60),
         ("D002", "OP1001", "EXC001", "Trenching",        "Cloudy", "Site A - Zone 2", 45),
         ("D003", "OP1001", "EXC001", "Material Loading", "Rainy",  "Site B - Depot",  30),
         ("D004", "OP1001", "EXC001", "Grading",          "Sunny",  "Site A - Zone 7", 35),
+        # OP1002 - Priya Sharma (Expert, Excavator L3 / Dozer L2)
+        ("D005", "OP1002", "EXC002", "Earth Excavation", "Cloudy", "Site A - Zone 5", 65),
+        ("D006", "OP1002", "EXC002", "Trenching",        "Windy",  "Site A - Zone 1", 50),
+        ("D007", "OP1002", "EXC002", "Grading",          "Rainy",  "Site B - Depot",  40),
+        # OP1003 - Ravi Verma (Beginner, Excavator L1)
+        ("D008", "OP1003", "LOD001", "Material Loading", "Sunny",  "Site C - Yard",   35),
+        ("D009", "OP1003", "LOD001", "Material Loading", "Cloudy", "Site C - Yard",   35),
+        ("D010", "OP1003", "LOD001", "Earth Excavation", "Sunny",  "Site A - Zone 3", 70),
     ]
     for code, op, mac, ttype, w, site, est in demo_tasks:
         db.add(ScheduledTask(task_code=code, operator_id=op, machine_id=mac,
