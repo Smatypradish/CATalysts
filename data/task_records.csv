@@ -1,0 +1,6 @@
+Task ID,Task Type,Weather,Operator Skill,Machine Age (yrs),Estimated Time (min),Actual Time (min)
+T001,Earth Excavation,Sunny,Expert,2,60,58
+T002,Trenching,Rainy,Intermediate,4,45,52
+T003,Material Loading,Cloudy,Beginner,3,30,42
+T004,Grading,Sunny,Expert,5,35,33
+T005,Demolition,Windy,Intermediate,6,90,105

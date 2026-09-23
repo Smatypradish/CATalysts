@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# App data / logs (do not commit the live SQLite DB or run logs)
+*.db
+backend/*_out.txt
+backend/*_err.txt
+backend/smoke_out.txt
+backend/smoke_err.txt
+backend/ev*.json
+backend/fog.json
+backend/login_test.json
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/*_out.txt
+frontend/*_err.txt
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
