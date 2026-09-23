@@ -10,19 +10,33 @@ export default function BehaviorAnalysis() {
   const [data, setData] = useState(null);
   const [telemetry, setTelemetry] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   const load = async () => {
-    const [a, t] = await Promise.all([
-      api.get(`/behavior/${operator.operator_id}/analyze`),
-      api.get(`/behavior/${operator.operator_id}/telemetry`),
-    ]);
-    setData(a.data);
-    setTelemetry(t.data);
+    setError('');
+    try {
+      const [a, t] = await Promise.all([
+        api.get(`/behavior/${operator.operator_id}/analyze`),
+        api.get(`/behavior/${operator.operator_id}/telemetry`),
+      ]);
+      setData(a.data);
+      setTelemetry(t.data);
+    } catch {
+      setError('Could not load behavior analysis. Is the backend running on :8001?');
+    }
   };
   useEffect(() => { load(); }, []); // eslint-disable-line
 
   const rerun = async () => { setBusy(true); await load(); setBusy(false); };
 
+  if (error && !data) {
+    return (
+      <div className="panel max-w-xl">
+        <p className="text-sm text-red-400">{error}</p>
+        <button className="btn-primary mt-4" onClick={load}>Retry</button>
+      </div>
+    );
+  }
   if (!data) return <div className="text-zinc-400">Analysing telemetry…</div>;
 
   return (

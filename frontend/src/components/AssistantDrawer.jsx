@@ -53,8 +53,8 @@ export default function AssistantDrawer({ open, onClose }) {
         <div className="flex items-center gap-2">
           <Bot className="text-cat-yellow" size={20} />
           <div>
-            <div className="font-bold text-sm">Operator Companion AI</div>
-            <div className="text-[11px] text-zinc-400">Grounded in live app data</div>
+            <div className="font-bold text-sm">Smart Assistant</div>
+            <div className="text-[11px] text-zinc-400">Rule-based and grounded in live application data</div>
           </div>
         </div>
         <button onClick={onClose} className="text-zinc-400 hover:text-white">

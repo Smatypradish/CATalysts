@@ -68,7 +68,7 @@ export default function Dashboard() {
       <div className="panel border-cat-yellow/40">
         <div className="flex items-center gap-2 mb-3">
           <Sparkles size={18} className="text-cat-yellow" />
-          <h2 className="font-bold text-cat-yellow">AI Insights</h2>
+          <h2 className="font-bold text-cat-yellow">Smart Insights</h2>
           <span className="text-[11px] text-zinc-500">
             (generated from your live tasks, telemetry and predictions — not hardcoded)
           </span>

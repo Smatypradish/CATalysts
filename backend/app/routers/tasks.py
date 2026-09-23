@@ -1,7 +1,7 @@
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -12,7 +12,9 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 
 class CompleteRequest(BaseModel):
-    actual_time: float | None = None
+    # Optional manual override; must be a plausible task duration in minutes
+    # (positive, capped at one 8-hour shift). Omit to use the demo simulation.
+    actual_time: float | None = Field(default=None, gt=0, le=480)
 
 
 def _row(t: ScheduledTask) -> dict:

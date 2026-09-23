@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -9,18 +10,21 @@ from ..models import Incident
 
 router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 
+Severity = Literal["INFO", "WARNING", "HIGH", "CRITICAL"]
+IncidentStatus = Literal["Open", "Acknowledged", "Resolved"]
+
 
 class IncidentCreate(BaseModel):
     operator_id: str
     machine_id: str
     incident_type: str
-    severity: str = "INFO"
+    severity: Severity = "INFO"
     description: str
     task_code: str | None = None
 
 
 class IncidentUpdate(BaseModel):
-    status: str | None = None
+    status: IncidentStatus | None = None
     action_taken: str | None = None
 
 

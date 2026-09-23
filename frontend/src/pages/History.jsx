@@ -7,11 +7,25 @@ import { Badge, SectionTitle } from '../components/ui.jsx';
 export default function History() {
   const { operator } = useAuth();
   const [history, setHistory] = useState(null);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    api.get(`/history/${operator.operator_id}/performance`).then(({ data }) => setHistory(data));
-  }, [operator.operator_id]);
+  const load = () => {
+    setError('');
+    api.get(`/history/${operator.operator_id}/performance`)
+      .then(({ data }) => setHistory(data))
+      .catch(() => setError('Could not load operation history. Is the backend running on :8001?'));
+  };
 
+  useEffect(() => { load(); }, [operator.operator_id]); // eslint-disable-line
+
+  if (error) {
+    return (
+      <div className="panel max-w-xl">
+        <p className="text-sm text-red-400">{error}</p>
+        <button className="btn-primary mt-4" onClick={load}>Retry</button>
+      </div>
+    );
+  }
   if (!history) return <div className="text-zinc-400">Loading history…</div>;
 
   return (

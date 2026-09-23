@@ -6,9 +6,18 @@ import { Badge, Empty, SectionTitle } from '../components/ui.jsx';
 export default function IncidentLog() {
   const [incidents, setIncidents] = useState([]);
   const [filter, setFilter] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const load = () =>
-    api.get('/incidents').then(({ data }) => setIncidents(data));
+  const load = () => {
+    setError('');
+    api.get('/incidents')
+      .then(({ data }) => { setIncidents(data); setLoading(false); })
+      .catch(() => {
+        setError('Could not load the incident log. Is the backend running on :8001?');
+        setLoading(false);
+      });
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -18,6 +27,16 @@ export default function IncidentLog() {
   };
 
   const visible = filter ? incidents.filter((i) => i.severity === filter) : incidents;
+
+  if (loading) return <div className="text-zinc-400">Loading incidents…</div>;
+  if (error) {
+    return (
+      <div className="panel max-w-xl">
+        <p className="text-sm text-red-400">{error}</p>
+        <button className="btn-primary mt-4" onClick={load}>Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-6xl">

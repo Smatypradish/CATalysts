@@ -91,7 +91,7 @@ export default function Layout() {
             onClick={() => setAssistantOpen(true)}
             className="w-full btn-ghost justify-center mb-2"
           >
-            <Bot size={16} className="text-cat-yellow" /> AI Assistant
+            <Bot size={16} className="text-cat-yellow" /> Smart Assistant
           </button>
           <div className="text-xs text-zinc-400 px-1">
             <div className="font-semibold text-zinc-200">{operator.name}</div>

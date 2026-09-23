@@ -3,7 +3,7 @@
 An intelligent operator assistant for CAT machinery, built for the hackathon problem
 statement. It combines task-time prediction, a deterministic real-time safety rule
 engine, unusual behavior detection, behaviour-linked training recommendations and a
-grounded AI assistant — in one operator-facing web app.
+grounded rule-based assistant — in one operator-facing web app.
 
 ## Problem
 
@@ -17,12 +17,12 @@ real time, detects unusual operating behavior, and recommends targeted training.
 
 | Capability | How it works |
 |---|---|
-| Operator dashboard | Live status of machine, safety posture, today's tasks, AI-generated insights |
+| Operator dashboard | Live status of machine, safety posture, today's tasks, data-driven insights |
 | Task time prediction | scikit-learn `GradientBoostingRegressor` + `OneHotEncoder(task_type, weather, skill)` + machine age; counterfactual factor explanations |
 | Real-time safety monitoring | **Deterministic rule engine only** (seatbelt, proximity) with weather-adjusted thresholds; CRITICAL alerts fire instantly and are logged |
 | Unusual behavior detection | Policy rules + per-operator z-scores vs baseline + `IsolationForest` outliers; every finding explains *what / why / action* |
 | Training recommendations | Findings are mapped to training modules (e.g. excessive idling → TM-IDLE) — derived from data, not hardcoded |
-| AI assistant | Intent-classified, grounded answers over the app's own data (safety status, predictions, behavior findings). Not an open chatbot — answers always cite the data they used |
+| Smart assistant | Rule-based (not an LLM): intent-classified, grounded answers over the app's own data (safety status, predictions, behavior findings). Not an open chatbot — answers always cite the data they used |
 | Incident log & history | Incidents can be acknowledged/resolved; completed tasks show predicted vs actual with variance |
 
 ### Safety-first architecture decision
@@ -119,7 +119,7 @@ OP1003 → LOD001 (D008–D010).
 ## 14-step demo workflow
 
 1. Log in as **OP1001 / 1001**.
-2. Dashboard shows machine status, safety posture, tasks D001–D004 and AI insights.
+2. Dashboard shows machine status, safety posture, tasks D001–D004 and smart insights.
 3. Open **D001 → Predict completion time**: predicted time, factor explanations
    ("why: rainy weather, machine age...") and the honest model disclaimer.
 4. **Start operation** → Safety Monitor with live simulated sensors (2 s refresh).
@@ -138,7 +138,7 @@ OP1003 → LOD001 (D008–D010).
 11. Mark the module **complete**.
 12. Return to the task and **Complete task** → predicted vs actual with variance.
 13. **History** → prediction accuracy, incidents by severity, data provenance.
-14. Ask the **AI Assistant**: "Why am I flagged?", "Predict D002", "Am I safe?" —
+14. Ask the **Smart Assistant**: "Why am I flagged?", "Predict D002", "Am I safe?" —
     answers are grounded in live DB data.
 
 To reset the demo: click **Reset demo data** in the sidebar (reseed DB + clears live
@@ -155,6 +155,42 @@ sessions), or `POST /api/admin/reseed` from Swagger UI at `/docs`.
 - Auth is a demo PIN (no hashing/JWT) — not for production.
 - The AI assistant answers only from the app's own data; it has no general LLM
   knowledge and deliberately refuses to give safety overrides.
+
+## Limitations & Judge Q&A
+
+### What is real vs synthetic vs simulated
+
+| Data | Source tag | What it is |
+|---|---|---|
+| `data/machine_telemetry.csv` (4 rows) | `dataset` | Supplied Dataset 1, loaded verbatim |
+| `data/task_records.csv` (5 rows) | `dataset` | Supplied Dataset 2, loaded verbatim; trains the ML model |
+| 50 task-history rows | `synthetic` | Labelled prototype rows from a documented formula (`backend/app/seed.py`) so ML training is possible at all |
+| Baseline + live telemetry rows | `simulated` | Generated sensor data for operator baselines and the live demo; always labelled |
+| Operators, machines, scheduled tasks, training modules | demo master data | Seeded demo content, not from any dataset |
+
+### Honest limitations
+
+- **The assistant is deterministic/rule-based, not an LLM.** It classifies intent with
+  keyword matching and answers from templates grounded in live database queries,
+  always citing the data it used. We chose this deliberately: it cannot hallucinate
+  and can never override or silence a safety rule. An LLM+RAG layer over CAT manuals
+  is future work (with safety intents still hard-blocked).
+- **Task-time prediction** trains on the 5 supplied real task records plus 50 clearly
+  labelled synthetic prototype records. We do **not** claim production-level ML
+  accuracy: the leave-one-out MAE on the real rows (~10 min) is disclosed in the UI
+  and every prediction response, with an explicit non-production disclaimer.
+- **Proximity telemetry is simulated/assumed.** The supplied dataset has no proximity
+  sensor field, so proximity is an assumed sensor for the prototype (documented in
+  `backend/app/models.py`); the deterministic rule logic is what would run on real
+  sensor feeds.
+- **Task completion "actual" times are simulated** for demo acceleration (scaled near
+  the prediction) so predicted-vs-actual variance can be shown within a short
+  session; this is disclosed in the API response and the UI.
+- **Authentication is demo-scope PIN login** (no hashing, tokens or roles) — it is
+  not production authentication.
+- **Real deployment** would use real CAT fleet telemetry (VisionLink / Product Link),
+  real proximity sensors, enterprise identity/authentication, and production-grade
+  infrastructure.
 
 ## Future enhancements
 

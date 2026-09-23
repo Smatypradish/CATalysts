@@ -7,6 +7,7 @@ venv/
 
 # App data / logs (do not commit the live SQLite DB or run logs)
 *.db
+*.log
 backend/*_out.txt
 backend/*_err.txt
 backend/smoke_out.txt

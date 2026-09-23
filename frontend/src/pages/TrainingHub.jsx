@@ -10,18 +10,36 @@ export default function TrainingHub() {
   const [recs, setRecs] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [toast, setToast] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
 
   const load = async () => {
-    const [m, r, a] = await Promise.all([
-      api.get('/training/modules'),
-      api.get(`/training/recommendations/${operator.operator_id}`),
-      api.get(`/training/assignments/${operator.operator_id}`),
-    ]);
-    setModules(m.data);
-    setRecs(r.data);
-    setAssignments(a.data);
+    setError('');
+    try {
+      const [m, r, a] = await Promise.all([
+        api.get('/training/modules'),
+        api.get(`/training/recommendations/${operator.operator_id}`),
+        api.get(`/training/assignments/${operator.operator_id}`),
+      ]);
+      setModules(m.data);
+      setRecs(r.data);
+      setAssignments(a.data);
+      setLoaded(true);
+    } catch {
+      setError('Could not load the Training Hub. Is the backend running on :8001?');
+    }
   };
   useEffect(() => { load(); }, []); // eslint-disable-line
+
+  if (error && !loaded) {
+    return (
+      <div className="panel max-w-xl">
+        <p className="text-sm text-red-400">{error}</p>
+        <button className="btn-primary mt-4" onClick={load}>Retry</button>
+      </div>
+    );
+  }
+  if (!loaded) return <div className="text-zinc-400">Loading training hub…</div>;
 
   const assign = async (moduleCode, reason) => {
     await api.post('/training/assign', {
