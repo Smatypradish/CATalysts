@@ -1,6 +1,6 @@
 import {
-  Activity, Bot, ClipboardList, GraduationCap, HardHat, History,
-  LayoutDashboard, LogOut, RotateCcw, ShieldAlert, TriangleAlert,
+  Activity, Bot, ClipboardList, FlaskConical, GraduationCap, HardHat,
+  History, LayoutDashboard, LogOut, RotateCcw, ShieldAlert, TriangleAlert,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/safety', label: 'Safety Monitor', icon: ShieldAlert },
   { to: '/behavior', label: 'Behavior Analysis', icon: Activity },
+  { to: '/what-if', label: 'What-If Simulator', icon: FlaskConical },
   { to: '/training', label: 'Training Hub', icon: GraduationCap },
   { to: '/incidents', label: 'Incident Log', icon: ClipboardList },
   { to: '/history', label: 'History', icon: History },

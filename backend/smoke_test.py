@@ -185,4 +185,54 @@ a2 = call("POST", "/api/assistant/ask",
           {"operator_id": "OP1001", "message": "How long will my next task take?"})
 check("assistant prediction answer", "min" in a2["answer"])
 
+# What-If Simulator: options, baseline vs what-if, provenance
+wio = call("GET", "/api/prediction/what-if/options")
+check("what-if options from model encoder",
+      len(wio["task_types"]) == 5 and len(wio["weathers"]) == 4
+      and len(wio["skills"]) == 3)
+
+wi_base = {"task_type": "Earth Excavation", "weather": "Sunny",
+           "operator_skill": "Intermediate", "machine_age": 5,
+           "workload_pct": 100, "idle_pct": 10}
+same = call("POST", "/api/prediction/what-if",
+            {"baseline": wi_base, "scenario": dict(wi_base)})
+check("identical scenarios -> zero diff",
+      same["comparison"]["duration"]["abs_diff"] == 0
+      and same["comparison"]["duration"]["pct_diff"] == 0
+      and same["comparison"]["fuel"]["abs_diff"] == 0)
+
+worse_in = {"task_type": "Earth Excavation", "weather": "Rainy",
+            "operator_skill": "Beginner", "machine_age": 9,
+            "workload_pct": 120, "idle_pct": 30}
+worse = call("POST", "/api/prediction/what-if",
+             {"baseline": wi_base, "scenario": worse_in})
+check("what-if worsens duration + fuel + outcome",
+      worse["comparison"]["duration"]["abs_diff"] > 0
+      and worse["comparison"]["fuel"]["abs_diff"] > 0
+      and worse["scenario"]["outcome"]["level"] in ("MEDIUM", "HIGH"))
+check("percentage difference reported",
+      worse["comparison"]["duration"]["pct_diff"] > 0
+      and worse["comparison"]["fuel"]["pct_diff"] > 0)
+
+# Model vs simulated separation: change ONLY workload/idle -> the
+# model-predicted duration must be identical while totals differ.
+sim_only = call("POST", "/api/prediction/what-if",
+                {"baseline": wi_base,
+                 "scenario": {**wi_base, "workload_pct": 80, "idle_pct": 40}})
+check("workload/idle do not change the model prediction",
+      sim_only["comparison"]["model_duration"]["abs_diff"] == 0
+      and sim_only["comparison"]["duration"]["abs_diff"] != 0)
+
+check("top factors attributed with provenance",
+      len(worse["comparison"]["top_factors"]) >= 1 and all(
+          f["source"] in ("model", "simulated")
+          for f in worse["comparison"]["top_factors"]))
+check("assumptions + provenance documented in response",
+      "assumptions" in worse["provenance"]
+      and "NOT real CAT" in worse["provenance"]["simulated"])
+print("   what-if:", wi_base["task_type"], "baseline",
+      worse["comparison"]["duration"]["baseline"], "min ->",
+      worse["comparison"]["duration"]["scenario"], "min (",
+      worse["comparison"]["duration"]["pct_diff"], "% )")
+
 print("\nALL SMOKE TESTS PASSED")

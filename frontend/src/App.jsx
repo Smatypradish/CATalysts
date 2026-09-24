@@ -9,6 +9,7 @@ import Login from './pages/Login.jsx';
 import SafetyMonitor from './pages/SafetyMonitor.jsx';
 import TaskDetail from './pages/TaskDetail.jsx';
 import TrainingHub from './pages/TrainingHub.jsx';
+import WhatIfSimulator from './pages/WhatIfSimulator.jsx';
 
 function Protected({ children }) {
   const { operator } = useAuth();
@@ -29,6 +30,7 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
         <Route path="tasks/:taskCode" element={<TaskDetail />} />
+        <Route path="what-if" element={<WhatIfSimulator />} />
         <Route path="safety" element={<SafetyMonitor />} />
         <Route path="behavior" element={<BehaviorAnalysis />} />
         <Route path="training" element={<TrainingHub />} />

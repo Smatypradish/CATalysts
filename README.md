@@ -19,6 +19,7 @@ real time, detects unusual operating behavior, and recommends targeted training.
 |---|---|
 | Operator dashboard | Live status of machine, safety posture, today's tasks, data-driven insights |
 | Task time prediction | scikit-learn `GradientBoostingRegressor` + `OneHotEncoder(task_type, weather, skill)` + machine age; counterfactual factor explanations |
+| What-If Simulator | Baseline vs what-if side-by-side over task type, weather, skill, machine age (same prediction model) + workload/idle (documented simulated layer); shows duration, estimated fuel, operating outcome band, absolute/% differences and top factors with model-vs-simulated provenance labels |
 | Real-time safety monitoring | **Deterministic rule engine only** (seatbelt, proximity) with weather-adjusted thresholds; CRITICAL alerts fire instantly and are logged. Dynamic Proximity Safety Zone: simulated machine speed + radar readings give relative closing speed and time-to-contact, classifying surroundings SAFE / CAUTION / DANGER with an in-UI zone graphic and browser voice alerts (speech synthesis) |
 | Unusual behavior detection | Policy rules + per-operator z-scores vs baseline + `IsolationForest` outliers; every finding explains *what / why / action* |
 | Training recommendations | Findings are mapped to training modules (e.g. excessive idling → TM-IDLE) — derived from data, not hardcoded |
@@ -79,7 +80,7 @@ CAT-Operator-Companion/
     run.py                  # start server (seeds DB + trains model on boot)
     seed.py                 # verbatim CSV loads + provenance integrity check
     generate_task_records_100.py  # documented generator: 5 originals + 95 synthetic
-    smoke_test.py           # 33-check end-to-end demo flow + dataset/zone integrity test
+    smoke_test.py           # 40-check end-to-end demo flow + dataset/zone/what-if integrity test
     app/
       main.py, database.py, models.py
       routers/              # auth, dashboard, tasks, prediction, safety,
@@ -90,10 +91,13 @@ CAT-Operator-Companion/
         behavior_analysis.py    # rules + z-scores + IsolationForest
         training_recommender.py # findings -> training modules
         simulator.py            # live simulated telemetry + event injection
+        what_if.py              # baseline vs what-if: model reuse + documented
+                                # simulated fuel/workload layer (NOT CAT formulas)
         assistant.py            # intent-based grounded assistant
   frontend/
     src/pages/              # Dashboard, TaskDetail, SafetyMonitor,
-                            # BehaviorAnalysis, TrainingHub, IncidentLog, History
+                            # BehaviorAnalysis, TrainingHub, IncidentLog, History,
+                            # WhatIfSimulator
     src/components/         # Layout (sidebar + critical banner), AssistantDrawer, ui
 ```
 
@@ -206,6 +210,12 @@ sessions), or `POST /api/admin/reseed` from Swagger UI at `/docs`.
   session; this is disclosed in the API response and the UI.
 - **Authentication is demo-scope PIN login** (no hashing, tokens or roles) — it is
   not production authentication.
+- **What-If fuel/workload model is simulated**: predicted duration comes from the
+  trained task-time model, but the workload/idle duration transform, fuel burn
+  (15 L/h productive at 100% workload, 4 L/h idling) and outcome bands are simple
+  documented prototype assumptions in `backend/app/services/what_if.py` — **not**
+  real CAT operational formulas. The UI tags every value ML (model-predicted) or
+  SIM (simulated).
 - **Real deployment** would use real CAT fleet telemetry (VisionLink / Product Link),
   real proximity sensors, enterprise identity/authentication, and production-grade
   infrastructure.

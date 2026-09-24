@@ -1,5 +1,6 @@
 import {
-  ArrowLeft, CheckCircle2, CirclePlay, CloudRain, Clock3, Info, Timer,
+  ArrowLeft, CheckCircle2, CirclePlay, CloudRain, Clock3, FlaskConical,
+  Info, Timer,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -92,6 +93,9 @@ export default function TaskDetail() {
           <button className="btn-ghost" onClick={start} disabled={!!busy}>
             <CirclePlay size={16} /> Start operation (opens Safety Monitor)
           </button>
+          <Link to={`/what-if?task=${task.task_code}`} className="btn-ghost">
+            <FlaskConical size={16} /> Open in What-If Simulator
+          </Link>
         </div>
       )}
       {task.status === 'In Progress' && (
