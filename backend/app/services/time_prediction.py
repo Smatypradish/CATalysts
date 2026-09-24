@@ -1,13 +1,29 @@
 """Task time estimation pipeline (scikit-learn).
 
-Trained on the 5 real rows from Dataset 2 PLUS clearly-labelled synthetic rows
-(small supplied dataset -> synthetic augmentation is required and documented).
-Honesty: leave-one-out MAE on the real rows is reported in every response.
+Trained on the 100 task-history records seeded from data/task_records_100.csv:
+the 5 real Caterpillar-supplied rows (source='dataset') PLUS 95 clearly-labelled
+synthetic rows (source='synthetic') — a 5-row supplied dataset cannot train a
+regressor on its own, so labelled synthetic augmentation is required and documented
+(backend/generate_task_records_100.py).
+
+Input features, BY DESIGN: task_type, weather, operator_skill (one-hot) and
+machine_age (numeric). Estimated Time is NEVER used as an input feature: it is a
+planner guess, not a physical driver of duration, and using it would leak the
+very thing we are trying to improve on into the model.
+
+Honest evaluation — no accuracy percentages are reported anywhere:
+  1. The 95 synthetic rows are split 80/20 (seeded) into train/validation; the
+     holdout MAE/RMSE measures fit to the synthetic distribution only.
+  2. Separately, leave-one-out MAE over the 5 REAL rows shows how predictions
+     behave on the supplied data. This is a very small prototype evaluation,
+     explicitly NOT production accuracy.
 """
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
@@ -42,12 +58,25 @@ def train(db) -> dict:
     global _model, _meta
     rows = db.query(TaskHistory).all()
     df = _frame(rows)
-    X = df[CAT_COLS + NUM_COLS]
+    X = df[CAT_COLS + NUM_COLS]   # estimated_time deliberately excluded
     y = df["actual_time"]
     _model = _build_pipeline().fit(X, y)
 
-    # Honest evaluation: leave-one-out on the 5 REAL dataset rows only.
+    synth = df[df.source == "synthetic"]
     real = df[df.source == "dataset"]
+
+    # --- Validation 1: seeded 80/20 train/validation split of the 95 SYNTHETIC
+    # rows. The holdout MAE/RMSE only measures fit to the synthetic
+    # distribution — it says nothing about real-world accuracy on its own.
+    s_train, s_val = train_test_split(synth, test_size=0.2, random_state=42)
+    vm = _build_pipeline().fit(s_train[CAT_COLS + NUM_COLS], s_train["actual_time"])
+    vp = vm.predict(s_val[CAT_COLS + NUM_COLS])
+    val_mae = round(float(mean_absolute_error(s_val["actual_time"], vp)), 1)
+    val_rmse = round(float(np.sqrt(mean_squared_error(s_val["actual_time"], vp))), 1)
+
+    # --- Validation 2: leave-one-out over the 5 REAL dataset rows (each fold
+    # trains on the other 99 records). Reported as a very small prototype
+    # evaluation of how predictions behave on the supplied rows — nothing more.
     errs = []
     for i in real.index:
         train_idx = df.index.difference([i])
@@ -58,14 +87,28 @@ def train(db) -> dict:
 
     _meta = {
         "n_total": len(df),
-        "n_real_dataset": int((df.source == "dataset").sum()),
-        "n_synthetic": int((df.source == "synthetic").sum()),
+        "n_real_dataset": int(len(real)),
+        "n_synthetic": int(len(synth)),
+        "n_synth_train": int(len(s_train)),
+        "n_synth_validation": int(len(s_val)),
+        "synth_validation_mae_min": val_mae,
+        "synth_validation_rmse_min": val_rmse,
         "loo_mae_real_rows_min": loo_mae,
+        "features": CAT_COLS + NUM_COLS,
+        "excluded_features": ["estimated_time"],
         "algorithm": "GradientBoostingRegressor + OneHotEncoder(task_type, weather, skill)",
-        "disclaimer": ("Prototype model: supplied dataset has only 5 rows, so it was "
-                       "augmented with clearly-labelled synthetic rows. Real deployment "
-                       "requires real CAT fleet historical data; do not treat the MAE as "
-                       "production accuracy."),
+        "evaluation_note": (
+            f"Synthetic holdout: {val_mae} min MAE / {val_rmse} min RMSE on "
+            f"{len(s_val)} held-out synthetic rows (80/20 split of the 95). "
+            f"Real-data check: {loo_mae} min leave-one-out MAE over the 5 "
+            "supplied Caterpillar rows — a very small prototype evaluation, "
+            "not a measure of production accuracy."),
+        "disclaimer": (
+            "Prototype model trained on 5 supplied Caterpillar task records plus "
+            "95 clearly-labelled synthetic records. Estimated Time is not a model "
+            "input. The 5-row leave-one-out MAE is a very small prototype "
+            "evaluation only — real deployment requires real CAT fleet historical "
+            "data; do not treat any reported MAE as production accuracy."),
     }
     return _meta
 

@@ -1,9 +1,12 @@
 """End-to-end demo workflow smoke test against a running server on :8001."""
+import csv
 import json
 import time
 import urllib.request
+from pathlib import Path
 
 BASE = "http://localhost:8001"
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
 
 def call(method, path, body=None):
@@ -90,6 +93,36 @@ check("task completed", done["task"]["status"] == "Completed")
 check("variance computed", done["variance_min"] is not None)
 perf = call("GET", "/api/history/OP1001/performance")
 check("performance history", len(perf["completed_tasks"]) == 1)
+
+# Expanded training dataset: 100 records = 5 original (verbatim) + 95 synthetic.
+hist = perf["historical_records"]
+check("100 total training records", len(hist) == 100)
+n_ds = sum(1 for r in hist if r["source"] == "dataset")
+n_sy = sum(1 for r in hist if r["source"] == "synthetic")
+check("provenance: 5 dataset + 95 synthetic", n_ds == 5 and n_sy == 95)
+
+# The 5 Caterpillar-supplied rows must be exactly the supplied CSV values.
+supplied = sorted(csv.DictReader((DATA_DIR / "task_records.csv").open()),
+                  key=lambda r: r["Task ID"])
+orig = sorted((r for r in hist if r["source"] == "dataset"),
+              key=lambda r: r["task_id"])
+check("original 5 rows unchanged", len(supplied) == 5 and len(orig) == 5 and all(
+    o["Task ID"] == d["task_id"] and o["Task Type"] == d["task_type"]
+    and o["Weather"] == d["weather"] and o["Operator Skill"] == d["operator_skill"]
+    and float(o["Machine Age (yrs)"]) == float(d["machine_age"])
+    and float(o["Estimated Time (min)"]) == float(d["estimated_time"])
+    and float(o["Actual Time (min)"]) == float(d["actual_time"])
+    for o, d in zip(supplied, orig)))
+
+# Honest model metadata: validation split + no estimated-time feature leakage.
+mi = call("GET", "/api/prediction/model-info")
+check("validation split covers the 95 synthetic rows",
+      mi["n_synth_train"] + mi["n_synth_validation"] == 95)
+check("synthetic holdout MAE reported",
+      mi["synth_validation_mae_min"] is not None)
+check("estimated time NOT a model feature",
+      "estimated_time" not in mi["features"])
+print("   model eval:", mi["evaluation_note"])
 
 # Assistant answers from app data
 a1 = call("POST", "/api/assistant/ask",

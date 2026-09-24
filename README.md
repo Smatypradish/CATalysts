@@ -47,26 +47,39 @@ for safety-critical decisions. The AI assistant cannot override or silence rules
   `source="dataset"`; drives behavior baselines and findings (the supplied rows
   contain 50–65 min idling and an unfastened-seatbelt record — the analyzer flags both).
 - `data/task_records.csv` (Dataset 2, 5 rows) — task type, weather, operator skill,
-  machine age, estimated vs actual time. These 5 real rows train the prediction model.
+  machine age, estimated vs actual time. Loaded verbatim (`source="dataset"`) and
+  never modified.
+- `data/task_records_100.csv` (100 rows) — the expanded task-time training set: the
+  same 5 Caterpillar rows embedded unchanged (`source="dataset"`) plus 95
+  clearly-labelled synthetic rows (`source="synthetic"`, Task IDs S001–S095).
+  Produced by `backend/generate_task_records_100.py` — a documented, deterministic
+  (seeded) formula with realistic noise; re-running it regenerates the identical file
+  and self-verifies that the 5 originals match the supplied CSV exactly.
 
 ### Small-dataset honesty
 
-5 rows cannot train a reliable regressor, so the model is augmented with 50 labelled
-synthetic rows (`source="synthetic"`, formula documented in `backend/app/seed.py`).
-Every prediction response and the UI footer disclose: rows used (real vs synthetic),
-algorithm, and the **leave-one-out MAE computed on the 5 real rows only** (~10 min),
-with an explicit disclaimer that this is not production accuracy. All simulated
-telemetry is tagged `source="simulated"` and shown with badges in the UI.
+5 rows cannot train a reliable regressor, so the model is augmented with 95 labelled
+synthetic rows (`source="synthetic"`; generation formula documented in
+`backend/generate_task_records_100.py`) for 100 training records in total.
+`Estimated Time` is deliberately **not** a model input (it is a planner guess, not a
+physical driver of duration). Validation is reported honestly, never as a percentage:
+an 80/20 seeded split of the 95 synthetic rows yields a holdout MAE/RMSE, and
+separately a leave-one-out MAE over the 5 real rows shows how predictions behave on
+the supplied data — explicitly labelled a very small prototype evaluation, not
+production accuracy. These numbers are disclosed in every prediction response and in
+the UI footer. All simulated telemetry is tagged `source="simulated"` and shown with
+badges in the UI.
 
 ## Project structure
 
 ```
 CAT-Operator-Companion/
-  data/                     # supplied CSV datasets
+  data/                     # supplied CSVs (untouched) + expanded 100-row dataset
   backend/
     run.py                  # start server (seeds DB + trains model on boot)
-    seed.py                 # verbatim CSV load + labelled synthetic augmentation
-    smoke_test.py           # 22-check end-to-end demo flow test
+    seed.py                 # verbatim CSV loads + provenance integrity check
+    generate_task_records_100.py  # documented generator: 5 originals + 95 synthetic
+    smoke_test.py           # 27-check end-to-end demo flow + dataset integrity test
     app/
       main.py, database.py, models.py
       routers/              # auth, dashboard, tasks, prediction, safety,
@@ -163,8 +176,8 @@ sessions), or `POST /api/admin/reseed` from Swagger UI at `/docs`.
 | Data | Source tag | What it is |
 |---|---|---|
 | `data/machine_telemetry.csv` (4 rows) | `dataset` | Supplied Dataset 1, loaded verbatim |
-| `data/task_records.csv` (5 rows) | `dataset` | Supplied Dataset 2, loaded verbatim; trains the ML model |
-| 50 task-history rows | `synthetic` | Labelled prototype rows from a documented formula (`backend/app/seed.py`) so ML training is possible at all |
+| `data/task_records.csv` (5 rows) | `dataset` | Supplied Dataset 2, loaded verbatim; never modified |
+| 95 task-history rows in `data/task_records_100.csv` | `synthetic` | Labelled prototype rows from a documented, deterministic formula (`backend/generate_task_records_100.py`); the file also embeds the 5 originals unchanged |
 | Baseline + live telemetry rows | `simulated` | Generated sensor data for operator baselines and the live demo; always labelled |
 | Operators, machines, scheduled tasks, training modules | demo master data | Seeded demo content, not from any dataset |
 
@@ -175,10 +188,13 @@ sessions), or `POST /api/admin/reseed` from Swagger UI at `/docs`.
   always citing the data it used. We chose this deliberately: it cannot hallucinate
   and can never override or silence a safety rule. An LLM+RAG layer over CAT manuals
   is future work (with safety intents still hard-blocked).
-- **Task-time prediction** trains on the 5 supplied real task records plus 50 clearly
-  labelled synthetic prototype records. We do **not** claim production-level ML
-  accuracy: the leave-one-out MAE on the real rows (~10 min) is disclosed in the UI
-  and every prediction response, with an explicit non-production disclaimer.
+- **Task-time prediction** trains on 100 task-history records: the 5 supplied real
+  Caterpillar records plus 95 clearly-labelled synthetic prototype records
+  (`data/task_records_100.csv`). `Estimated Time` is not a model input. We do **not**
+  claim production-level ML accuracy and report no percentage accuracy: an 80/20
+  holdout MAE/RMSE over the synthetic rows and a leave-one-out MAE over the 5 real
+  rows (a very small prototype evaluation) are disclosed in the UI and every
+  prediction response, with an explicit non-production disclaimer.
 - **Proximity telemetry is simulated/assumed.** The supplied dataset has no proximity
   sensor field, so proximity is an assumed sensor for the prototype (documented in
   `backend/app/models.py`); the deterministic rule logic is what would run on real

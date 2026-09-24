@@ -169,9 +169,12 @@ function TrainingTeaser({ recs }) {
 function ModelFootnote({ info }) {
   return (
     <div className="text-[11px] text-zinc-500 leading-relaxed">
-      ML model: {info.algorithm}. Trained on {info.n_real_dataset} supplied +{' '}
-      {info.n_synthetic} labelled synthetic rows. Leave-one-out MAE on the real rows:{' '}
-      {info.loo_mae_real_rows_min} min. Real deployment would require real CAT fleet data.
+      ML model: {info.algorithm}. Trained on {info.n_real_dataset} supplied Caterpillar +{' '}
+      {info.n_synthetic} labelled synthetic rows (estimated time is not an input feature).
+      Validation: {info.synth_validation_mae_min} min MAE on a {info.n_synth_validation}-row
+      synthetic holdout; {info.loo_mae_real_rows_min} min leave-one-out MAE on the{' '}
+      {info.n_real_dataset} real rows — a very small prototype evaluation, not production
+      accuracy. Real deployment would require real CAT fleet data.
     </div>
   );
 }

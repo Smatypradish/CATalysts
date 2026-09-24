@@ -116,19 +116,25 @@ function SummaryCards({ history }) {
       </div>
       <div className="panel">
         <SectionTitle title="Records provenance"
-          sub="Which training records came from the supplied dataset vs labelled simulation." />
+          sub="Which training records came from the supplied Caterpillar dataset vs labelled synthetic generation." />
         <div className="text-sm space-y-2">
           <div className="flex justify-between">
-            <span className="text-zinc-400">Supplied dataset rows (Dataset 2)</span>
+            <span className="text-zinc-400">Original Caterpillar records (Dataset 2)</span>
             <b>{nDataset}</b>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-400">Labelled synthetic rows</span>
+            <span className="text-zinc-400">Synthetic prototype records</span>
             <b>{nSynth}</b>
           </div>
+          <div className="flex justify-between border-t border-cat-line/40 pt-2">
+            <span className="text-zinc-300 font-medium">Total training records</span>
+            <b>{nDataset + nSynth}</b>
+          </div>
           <p className="text-[11px] text-zinc-500 pt-2">
-            All simulated data is explicitly labelled with a source tag; the two supplied
-            CSV datasets are loaded verbatim at seed time.
+            Original rows are loaded verbatim from data/task_records.csv and embedded
+            unchanged in data/task_records_100.csv; synthetic rows come from a documented,
+            deterministic formula (backend/generate_task_records_100.py). Every record
+            carries a source tag.
           </p>
         </div>
       </div>

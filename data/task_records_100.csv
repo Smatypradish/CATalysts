@@ -1,0 +1,101 @@
+Task ID,Task Type,Weather,Operator Skill,Machine Age (yrs),Estimated Time (min),Actual Time (min),Source
+T001,Earth Excavation,Sunny,Expert,2,60,58,dataset
+T002,Trenching,Rainy,Intermediate,4,45,52,dataset
+T003,Material Loading,Cloudy,Beginner,3,30,42,dataset
+T004,Grading,Sunny,Expert,5,35,33,dataset
+T005,Demolition,Windy,Intermediate,6,90,105,dataset
+S001,Grading,Sunny,Beginner,6,47.0,56.1,synthetic
+S002,Trenching,Windy,Beginner,5,60.7,76.7,synthetic
+S003,Demolition,Rainy,Expert,10,114.4,116.6,synthetic
+S004,Earth Excavation,Windy,Beginner,9,69.4,91.3,synthetic
+S005,Trenching,Cloudy,Intermediate,8,62.2,67.7,synthetic
+S006,Trenching,Rainy,Beginner,4,67.8,85.1,synthetic
+S007,Demolition,Rainy,Intermediate,4,109.8,112.1,synthetic
+S008,Demolition,Windy,Intermediate,9,109.0,119.7,synthetic
+S009,Material Loading,Windy,Expert,2,40.6,35.3,synthetic
+S010,Trenching,Rainy,Intermediate,2,60.2,65.3,synthetic
+S011,Earth Excavation,Windy,Expert,2,63.9,62.4,synthetic
+S012,Grading,Sunny,Expert,8,43.3,39.3,synthetic
+S013,Material Loading,Rainy,Intermediate,10,49.2,52.0,synthetic
+S014,Grading,Windy,Expert,2,47.7,47.1,synthetic
+S015,Material Loading,Rainy,Expert,7,48.8,44.1,synthetic
+S016,Demolition,Sunny,Intermediate,2,91.5,88.5,synthetic
+S017,Earth Excavation,Cloudy,Expert,2,61.5,57.0,synthetic
+S018,Trenching,Windy,Expert,5,65.7,60.8,synthetic
+S019,Demolition,Sunny,Beginner,2,83.7,109.7,synthetic
+S020,Earth Excavation,Cloudy,Intermediate,9,72.5,68.3,synthetic
+S021,Material Loading,Cloudy,Beginner,4,40.2,45.1,synthetic
+S022,Earth Excavation,Windy,Intermediate,1,61.0,66.3,synthetic
+S023,Demolition,Windy,Beginner,7,108.6,130.9,synthetic
+S024,Trenching,Windy,Intermediate,9,66.1,64.9,synthetic
+S025,Grading,Cloudy,Beginner,4,46.7,60.3,synthetic
+S026,Material Loading,Sunny,Expert,6,39.1,33.1,synthetic
+S027,Earth Excavation,Sunny,Expert,9,63.4,57.5,synthetic
+S028,Grading,Rainy,Beginner,3,48.9,60.3,synthetic
+S029,Material Loading,Sunny,Intermediate,4,38.0,43.6,synthetic
+S030,Demolition,Cloudy,Intermediate,1,93.6,96.7,synthetic
+S031,Trenching,Rainy,Expert,10,72.8,63.5,synthetic
+S032,Material Loading,Cloudy,Intermediate,6,41.3,45.4,synthetic
+S033,Grading,Cloudy,Expert,5,44.2,51.1,synthetic
+S034,Material Loading,Sunny,Beginner,10,43.4,46.5,synthetic
+S035,Demolition,Sunny,Expert,2,87.1,78.6,synthetic
+S036,Trenching,Sunny,Expert,2,51.4,48.4,synthetic
+S037,Material Loading,Windy,Beginner,3,45.3,47.9,synthetic
+S038,Grading,Rainy,Expert,9,58.5,48.5,synthetic
+S039,Material Loading,Rainy,Beginner,5,45.2,64.0,synthetic
+S040,Demolition,Cloudy,Beginner,2,91.7,122.0,synthetic
+S041,Trenching,Sunny,Intermediate,5,55.5,56.2,synthetic
+S042,Grading,Windy,Intermediate,5,48.6,49.3,synthetic
+S043,Demolition,Windy,Expert,1,94.3,86.2,synthetic
+S044,Earth Excavation,Sunny,Beginner,3,56.6,72.2,synthetic
+S045,Material Loading,Cloudy,Expert,8,40.6,38.6,synthetic
+S046,Grading,Sunny,Intermediate,3,44.2,44.3,synthetic
+S047,Earth Excavation,Cloudy,Beginner,10,68.1,82.5,synthetic
+S048,Material Loading,Windy,Intermediate,1,39.9,44.4,synthetic
+S049,Demolition,Cloudy,Expert,4,103.5,87.3,synthetic
+S050,Grading,Rainy,Intermediate,10,60.1,63.9,synthetic
+S051,Earth Excavation,Rainy,Expert,4,75.7,74.1,synthetic
+S052,Demolition,Rainy,Beginner,1,112.6,124.9,synthetic
+S053,Earth Excavation,Rainy,Beginner,7,73.0,96.9,synthetic
+S054,Trenching,Sunny,Beginner,2,49.2,56.9,synthetic
+S055,Trenching,Cloudy,Expert,8,59.9,56.5,synthetic
+S056,Trenching,Cloudy,Beginner,4,59.3,64.6,synthetic
+S057,Grading,Windy,Beginner,7,50.1,68.2,synthetic
+S058,Earth Excavation,Sunny,Intermediate,9,67.3,57.3,synthetic
+S059,Earth Excavation,Rainy,Intermediate,9,74.9,87.2,synthetic
+S060,Grading,Cloudy,Intermediate,10,48.9,55.0,synthetic
+S061,Demolition,Rainy,Beginner,2,107.5,127.1,synthetic
+S062,Trenching,Sunny,Expert,9,60.5,56.8,synthetic
+S063,Trenching,Rainy,Expert,4,69.2,58.6,synthetic
+S064,Trenching,Sunny,Intermediate,9,60.8,60.0,synthetic
+S065,Material Loading,Windy,Beginner,4,42.4,57.0,synthetic
+S066,Material Loading,Cloudy,Intermediate,6,39.8,46.2,synthetic
+S067,Material Loading,Cloudy,Beginner,5,42.3,47.8,synthetic
+S068,Material Loading,Sunny,Beginner,9,39.9,44.3,synthetic
+S069,Trenching,Cloudy,Expert,7,59.0,60.0,synthetic
+S070,Grading,Windy,Intermediate,9,51.7,52.7,synthetic
+S071,Demolition,Cloudy,Beginner,4,98.3,113.1,synthetic
+S072,Material Loading,Sunny,Expert,8,39.8,33.6,synthetic
+S073,Earth Excavation,Rainy,Intermediate,3,72.3,73.1,synthetic
+S074,Material Loading,Sunny,Expert,2,37.8,39.6,synthetic
+S075,Demolition,Rainy,Expert,5,109.5,101.1,synthetic
+S076,Grading,Windy,Beginner,8,54.1,64.1,synthetic
+S077,Grading,Cloudy,Intermediate,8,50.3,48.7,synthetic
+S078,Trenching,Cloudy,Beginner,8,58.6,71.4,synthetic
+S079,Demolition,Rainy,Beginner,1,110.6,136.8,synthetic
+S080,Demolition,Windy,Beginner,4,111.3,117.6,synthetic
+S081,Grading,Rainy,Expert,9,53.5,42.5,synthetic
+S082,Trenching,Windy,Expert,3,62.3,53.1,synthetic
+S083,Earth Excavation,Sunny,Expert,9,64.3,65.8,synthetic
+S084,Trenching,Windy,Beginner,9,69.7,76.7,synthetic
+S085,Earth Excavation,Windy,Intermediate,8,69.7,76.0,synthetic
+S086,Demolition,Windy,Beginner,4,102.2,124.5,synthetic
+S087,Material Loading,Sunny,Beginner,9,41.4,48.7,synthetic
+S088,Earth Excavation,Rainy,Beginner,4,70.5,89.9,synthetic
+S089,Material Loading,Sunny,Intermediate,9,38.5,43.0,synthetic
+S090,Grading,Cloudy,Intermediate,4,45.9,50.0,synthetic
+S091,Earth Excavation,Rainy,Beginner,9,76.2,99.7,synthetic
+S092,Trenching,Sunny,Beginner,10,54.8,74.9,synthetic
+S093,Material Loading,Cloudy,Expert,10,45.6,43.4,synthetic
+S094,Material Loading,Cloudy,Beginner,7,43.7,51.2,synthetic
+S095,Demolition,Sunny,Beginner,10,99.0,118.9,synthetic
