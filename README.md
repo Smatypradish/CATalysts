@@ -19,7 +19,7 @@ real time, detects unusual operating behavior, and recommends targeted training.
 |---|---|
 | Operator dashboard | Live status of machine, safety posture, today's tasks, data-driven insights |
 | Task time prediction | scikit-learn `GradientBoostingRegressor` + `OneHotEncoder(task_type, weather, skill)` + machine age; counterfactual factor explanations |
-| Real-time safety monitoring | **Deterministic rule engine only** (seatbelt, proximity) with weather-adjusted thresholds; CRITICAL alerts fire instantly and are logged |
+| Real-time safety monitoring | **Deterministic rule engine only** (seatbelt, proximity) with weather-adjusted thresholds; CRITICAL alerts fire instantly and are logged. Dynamic Proximity Safety Zone: simulated machine speed + radar readings give relative closing speed and time-to-contact, classifying surroundings SAFE / CAUTION / DANGER with an in-UI zone graphic and browser voice alerts (speech synthesis) |
 | Unusual behavior detection | Policy rules + per-operator z-scores vs baseline + `IsolationForest` outliers; every finding explains *what / why / action* |
 | Training recommendations | Findings are mapped to training modules (e.g. excessive idling → TM-IDLE) — derived from data, not hardcoded |
 | Smart assistant | Rule-based (not an LLM): intent-classified, grounded answers over the app's own data (safety status, predictions, behavior findings). Not an open chatbot — answers always cite the data they used |
@@ -79,7 +79,7 @@ CAT-Operator-Companion/
     run.py                  # start server (seeds DB + trains model on boot)
     seed.py                 # verbatim CSV loads + provenance integrity check
     generate_task_records_100.py  # documented generator: 5 originals + 95 synthetic
-    smoke_test.py           # 27-check end-to-end demo flow + dataset integrity test
+    smoke_test.py           # 33-check end-to-end demo flow + dataset/zone integrity test
     app/
       main.py, database.py, models.py
       routers/              # auth, dashboard, tasks, prediction, safety,
@@ -195,8 +195,10 @@ sessions), or `POST /api/admin/reseed` from Swagger UI at `/docs`.
   holdout MAE/RMSE over the synthetic rows and a leave-one-out MAE over the 5 real
   rows (a very small prototype evaluation) are disclosed in the UI and every
   prediction response, with an explicit non-production disclaimer.
-- **Proximity telemetry is simulated/assumed.** The supplied dataset has no proximity
-  sensor field, so proximity is an assumed sensor for the prototype (documented in
+- **Proximity and movement telemetry is simulated/assumed.** The supplied dataset
+  has no proximity sensor or machine-speed field, so proximity distance, relative
+  closing speed and ground speed are assumed sensors for the prototype
+  (documented in
   `backend/app/models.py`); the deterministic rule logic is what would run on real
   sensor feeds.
 - **Task completion "actual" times are simulated** for demo acceleration (scaled near

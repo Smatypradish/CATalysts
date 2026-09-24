@@ -66,6 +66,59 @@ check("proximity incident logged",
 call("POST", "/api/safety/simulate",
      {"operator_id": "OP1001", "event_type": "proximity_clear"})
 
+# Dynamic Proximity Safety Zone: movement telemetry + SAFE/CAUTION/DANGER
+live = call("GET", "/api/safety/live/OP1001")
+check("zone + movement fields present (labelled simulated)",
+      live["zone"] == "SAFE" and live["speed_kmh"] is not None
+      and live["movement_simulated"] is True)
+
+# Person walking up: SAFE -> CAUTION (WARNING) -> DANGER (CRITICAL)
+call("POST", "/api/safety/simulate",
+     {"operator_id": "OP1001", "event_type": "person_approaching"})
+seen_zones, danger_at = set(), None
+for _ in range(20):
+    live = call("GET", "/api/safety/live/OP1001")
+    seen_zones.add(live["zone"])
+    if live["zone"] == "DANGER":
+        danger_at = live["proximity_m"]
+        break
+incs = call("GET", "/api/incidents?operator_id=OP1001")
+check("person approach: CAUTION zone before DANGER (WARNING logged first)",
+      "CAUTION" in seen_zones and "DANGER" in seen_zones
+      and any(i["incident_type"] == "Proximity Warning"
+              and i["severity"] == "WARNING" for i in incs))
+check("person approach: DANGER escalation (CRITICAL logged)",
+      danger_at is not None
+      and any(i["incident_type"] == "Proximity Hazard"
+              and i["severity"] == "CRITICAL" for i in incs))
+call("POST", "/api/safety/simulate",
+     {"operator_id": "OP1001", "event_type": "proximity_clear"})
+
+# Weather adjustment enlarges the deterministic hazard zones
+w = call("POST", "/api/safety/simulate",
+         {"operator_id": "OP1001", "event_type": "weather_change",
+          "weather": "Rainy"})
+check("weather adjustment: Rainy enlarges zones (8.4 m / 4.2 m)",
+      w["snapshot"]["proximity_warn_m"] == 8.4
+      and w["snapshot"]["proximity_critical_m"] == 4.2)
+call("POST", "/api/safety/simulate",
+     {"operator_id": "OP1001", "event_type": "weather_change",
+      "weather": "Sunny"})
+
+# Fast-approaching vehicle: time-to-contact drives the zone into CAUTION
+# while still OUTSIDE the static 6 m warning radius (dynamic zone proof).
+call("POST", "/api/safety/simulate",
+     {"operator_id": "OP1001", "event_type": "vehicle_approaching"})
+live = call("GET", "/api/safety/live/OP1001")
+check("dynamic zone: TTC-driven CAUTION beyond static warning radius",
+      live["zone"] in ("CAUTION", "DANGER")
+      and live["proximity_m"] > live["proximity_warn_m"]
+      and live["closing_speed_mps"] > 0)
+call("POST", "/api/safety/simulate",
+     {"operator_id": "OP1001", "event_type": "proximity_clear"})
+live = call("GET", "/api/safety/live/OP1001")
+check("zone returns to SAFE after hazard clears", live["zone"] == "SAFE")
+
 # 9-11. Inject excessive idling -> analyzer detects + explains
 call("POST", "/api/safety/simulate",
      {"operator_id": "OP1001", "event_type": "excessive_idling"})

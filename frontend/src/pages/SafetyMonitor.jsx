@@ -1,17 +1,38 @@
 import {
   Activity, AlertOctagon, Flame, Gauge, Play, Radar, ShieldAlert, Timer,
+  Volume2, VolumeX,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api.js';
 import { useAuth } from '../context.jsx';
 import { Badge, SectionTitle } from '../components/ui.jsx';
+
+// Browser speech-synthesis voice alerts for CAUTION / DANGER zones.
+// Fires only on zone transitions decided by the deterministic backend rules.
+function speakZone(zone) {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(
+      zone === 'DANGER'
+        ? 'Danger. Danger. Object inside the critical zone. Stop the machine immediately.'
+        : 'Caution. Object or person inside the proximity warning zone.');
+    u.rate = 1.05;
+    u.pitch = zone === 'DANGER' ? 0.8 : 1.0;
+    u.volume = 1.0;
+    synth.speak(u);
+  } catch { /* speech synthesis optional */ }
+}
 
 export default function SafetyMonitor() {
   const { operator } = useAuth();
   const [live, setLive] = useState(null);
   const [flashAlert, setFlashAlert] = useState(null);
   const [toast, setToast] = useState('');
+  const [voiceOn, setVoiceOn] = useState(true);
+  const lastZoneRef = useRef(null);
 
   // Poll live (simulated) telemetry every 2s; surface alerts immediately.
   useEffect(() => {
@@ -28,6 +49,17 @@ export default function SafetyMonitor() {
     const t = setInterval(poll, 2000);
     return () => { cancelled = true; clearInterval(t); };
   }, [operator.operator_id]);
+
+  // Voice alerts on SAFE/CAUTION/DANGER zone transitions (deterministic
+  // backend classification; speech synthesis is announcement-only).
+  useEffect(() => {
+    const zone = live?.active ? live.zone : null;
+    if (!zone) { lastZoneRef.current = null; return; }
+    if (zone !== lastZoneRef.current) {
+      if (voiceOn && (zone === 'CAUTION' || zone === 'DANGER')) speakZone(zone);
+      lastZoneRef.current = zone;
+    }
+  }, [live?.active, live?.zone, voiceOn]);
 
   const raiseAlert = (alert) => {
     setFlashAlert(alert);
@@ -80,10 +112,7 @@ export default function SafetyMonitor() {
   }
 
   const seatbeltBad = live.seatbelt === 'Unfastened';
-  const proxCrit = live.proximity_critical_m ?? 3;
-  const proxWarn = live.proximity_warn_m ?? 6;
-  const proxBad = live.proximity_m <= proxCrit;
-  const proxWarnState = !proxBad && live.proximity_m <= proxWarn;
+  const zone = live.zone || 'SAFE';
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -95,7 +124,17 @@ export default function SafetyMonitor() {
             <span className="text-zinc-500">simulated telemetry (2 s refresh)</span>
           </p>
         </div>
-        <Badge tone="In Progress">ENGINE ON · {live.elapsed_min} min elapsed</Badge>
+        <div className="flex items-center gap-2">
+          <button
+            className="btn-ghost text-xs inline-flex items-center gap-1"
+            onClick={() => setVoiceOn((v) => !v)}
+            title="Browser speech-synthesis voice alerts for CAUTION / DANGER zones"
+          >
+            {voiceOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+            Voice alerts {voiceOn ? 'on' : 'off'}
+          </button>
+          <Badge tone="In Progress">ENGINE ON · {live.elapsed_min} min elapsed</Badge>
+        </div>
       </div>
 
       {flashAlert && (
@@ -126,9 +165,12 @@ export default function SafetyMonitor() {
           warn={live.idle_minutes >= 1} />
         <Tile icon={ShieldAlert} label="Seatbelt" value={live.seatbelt} danger={seatbeltBad} />
         <Tile icon={Radar} label="Proximity" value={`${live.proximity_m} m`}
-          warn={proxWarnState} danger={proxBad}
-          sub={live.approaching ? 'Person approaching!' : null} />
+          warn={zone === 'CAUTION'} danger={zone === 'DANGER'}
+          sub={zone === 'SAFE' ? null
+            : `${zone} zone${live.approaching ? ' — closing in!' : ''}`} />
       </div>
+
+      <ProximityZonePanel live={live} />
 
       <SimControls simulate={simulate} toast={toast} live={live} />
     </div>
@@ -146,6 +188,103 @@ function Tile({ icon: Icon, label, value, warn, danger, sub }) {
       </div>
       <div className={`text-xl font-bold mt-1 ${text}`}>{value}</div>
       {sub && <div className="text-[11px] text-amber-300 mt-0.5 animate-pulse">{sub}</div>}
+    </div>
+  );
+}
+
+const ZONE_STYLE = {
+  SAFE: { dot: '#4ade80', text: 'text-green-300', border: 'border-green-500', bg: 'bg-green-600/15' },
+  CAUTION: { dot: '#fbbf24', text: 'text-amber-300', border: 'border-amber-500', bg: 'bg-amber-600/15' },
+  DANGER: { dot: '#f87171', text: 'text-red-300', border: 'border-red-500', bg: 'bg-red-600/15' },
+};
+
+// Visual proximity-zone indicator: concentric weather-adjusted hazard rings
+// around the machine, with the detected object plotted at its (simulated)
+// distance. All values come from the deterministic backend rule engine.
+function ProximityZonePanel({ live }) {
+  const zone = live.zone || 'SAFE';
+  const style = ZONE_STYLE[zone];
+  const warn = live.proximity_warn_m ?? 6;
+  const crit = live.proximity_critical_m ?? 3;
+  const dist = live.proximity_m ?? 0;
+  const maxM = Math.max(warn * 1.7, dist * 1.15, 10); // metres to diagram edge
+  const toPx = (m) => Math.min((m / maxM) * 140, 140);
+  const ang = (-45 * Math.PI) / 180;
+  const objR = toPx(dist);
+  const objX = 160 + objR * Math.cos(ang);
+  const objY = 160 + objR * Math.sin(ang);
+  return (
+    <div className={`panel border ${style.border}`}>
+      <div className="flex items-start justify-between flex-wrap gap-2">
+        <SectionTitle
+          title="Dynamic Proximity Safety Zone"
+          sub="Deterministic SAFE / CAUTION / DANGER classification — weather-adjusted radii plus time-to-contact of closing objects. Distance, closing speed and machine speed are simulated sensors."
+        />
+        <span className={`px-4 py-1.5 rounded-full border text-sm font-extrabold tracking-widest ${style.border} ${style.text} ${style.bg} ${zone !== 'SAFE' ? 'animate-pulse' : ''}`}>
+          {zone}
+        </span>
+      </div>
+      <div className="grid md:grid-cols-2 gap-6 items-center mt-2">
+        <svg viewBox="0 0 320 320" className="w-full max-w-sm mx-auto">
+          {/* SAFE area (outer) */}
+          <circle cx="160" cy="160" r="140" fill="rgba(34,197,94,0.05)"
+            stroke="#22c55e" strokeOpacity="0.35" strokeWidth="1.5" />
+          {/* CAUTION ring = weather-adjusted warning radius */}
+          <circle cx="160" cy="160" r={toPx(warn)} fill="rgba(245,158,11,0.08)"
+            stroke="#f59e0b" strokeOpacity="0.8" strokeWidth="1.5" strokeDasharray="5 4" />
+          {/* DANGER core = weather-adjusted critical radius */}
+          <circle cx="160" cy="160" r={toPx(crit)} fill="rgba(239,68,68,0.15)"
+            stroke="#ef4444" strokeOpacity="0.9" strokeWidth="2" />
+          {/* machine at centre */}
+          <rect x="146" y="146" width="28" height="28" rx="6" fill="#f7cf05" />
+          <text x="160" y="164" textAnchor="middle" fontSize="11" fontWeight="800" fill="#111">CAT</text>
+          {/* detected object/person at its simulated distance */}
+          <circle cx={objX} cy={objY} r="14" fill={style.dot} opacity="0.25"
+            className={live.approaching ? 'animate-pulse' : ''} />
+          <circle cx={objX} cy={objY} r="6" fill={style.dot} stroke="#111" strokeWidth="1" />
+          <text x={objX} y={objY - 20} textAnchor="middle" fontSize="10" fill="#d4d4d8">
+            {dist.toFixed(1)} m
+          </text>
+          {/* ring labels */}
+          <text x={160 + toPx(crit) * 0.74} y={160 - toPx(crit) * 0.74 - 4} fontSize="9" fill="#f87171">
+            DANGER ≤ {crit} m
+          </text>
+          <text x={160 + toPx(warn) * 0.74} y={160 - toPx(warn) * 0.74 - 4} fontSize="9" fill="#fbbf24">
+            CAUTION ≤ {warn} m
+          </text>
+          <text x="18" y="24" fontSize="9" fill="#4ade80">SAFE</text>
+        </svg>
+        <div className="space-y-2 text-sm">
+          <Stat label="Distance to object" value={`${dist.toFixed(1)} m`} />
+          <Stat label="Relative closing speed"
+            value={live.closing_speed_mps != null
+              ? `${live.closing_speed_mps.toFixed(2)} m/s` : '—'} />
+          <Stat label="Time to contact"
+            value={live.ttc_s != null ? `~${live.ttc_s} s` : '—'} />
+          <Stat label="Machine ground speed"
+            value={<>{(live.speed_kmh ?? 0).toFixed(1)} km/h{' '}
+              <span className="text-[10px] text-zinc-500">SIMULATED</span></>} />
+          <div className="text-xs text-zinc-400 pt-1">
+            Weather-adjusted limits ({live.weather} ×{live.condition_factor}):
+            CAUTION ≤ {warn} m · DANGER ≤ {crit} m
+          </div>
+          <div className={`text-xs ${style.text}`}>Why: {live.zone_reason}</div>
+          <p className="text-[11px] text-zinc-500">
+            Proximity distance, relative closing speed and machine ground speed
+            are simulated telemetry for the demo. Zone classification is made by
+            the deterministic safety rule engine — never by the AI assistant.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="flex items-center justify-between border-b border-cat-line pb-1">
+      <span className="text-zinc-400">{label}</span>
+      <span className="font-bold text-zinc-100">{value}</span>
     </div>
   );
 }
@@ -194,6 +333,9 @@ function SimControls({ simulate, toast, live }) {
           </button>
           <button className="btn-danger" onClick={() => simulate('person_approaching')}>
             Person Approaching (live)
+          </button>
+          <button className="btn-danger" onClick={() => simulate('vehicle_approaching')}>
+            Vehicle Approaching Fast (live)
           </button>
           <button className="btn-danger" onClick={() => simulate('proximity_hazard')}>
             Instant Proximity Hazard

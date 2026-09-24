@@ -12,6 +12,8 @@ from . import safety_rules
 
 _sessions: dict = {}  # operator_id -> live session state
 
+TICK_SECONDS = 2.0  # simulated machine time advanced per tick
+
 
 def start_session(operator_id: str, machine_id: str, task_code: str,
                   weather: str) -> dict:
@@ -21,7 +23,9 @@ def start_session(operator_id: str, machine_id: str, task_code: str,
         "idle_seconds": 0, "seatbelt": True, "proximity_m": 12.0,
         "engine_on": True, "started": datetime.utcnow(),
         "forced_idle": False, "rng": random.Random(),
-        "approach": False, "prox_level": None,
+        "approach": False, "vehicle_approach": False, "prox_level": None,
+        # SIMULATED movement telemetry (not from any supplied dataset)
+        "speed_kmh": 3.0, "closing_speed_mps": None,
     }
     return snapshot(operator_id)
 
@@ -50,17 +54,27 @@ def tick(db, operator_id: str) -> dict | None:
         s["rpm"] = 750 + rng.uniform(-20, 20)   # idling RPM
         s["idle_seconds"] += 12                 # fast-forward idling for demo
     s["fuel_rate_lph"] = round(4 + s["rpm"] / 220, 1)
+    prev_d = s["proximity_m"]
     if s["approach"]:
         # Person walking toward the machine: distance closes every tick.
         s["proximity_m"] = round(max(1.5, s["proximity_m"] - rng.uniform(0.7, 1.3)), 1)
+    elif s["vehicle_approach"]:
+        # Vehicle driving toward the machine: closes fast (2.5-3.5 m/tick).
+        s["proximity_m"] = round(max(1.5, s["proximity_m"] - rng.uniform(2.5, 3.5)), 1)
     elif rng.random() < 0.05:  # benign proximity drift
         s["proximity_m"] = round(rng.uniform(7.0, 15.0), 1)
+    # Relative closing speed between consecutive (simulated) radar readings.
+    s["closing_speed_mps"] = safety_rules.relative_closing_speed_mps(
+        prev_d, s["proximity_m"], TICK_SECONDS)
 
     alert = safety_rules.evaluate_seatbelt(s["seatbelt"], s["engine_on"], s["weather"])
 
-    # Continuous proximity evaluation: log once per escalation level so the
-    # demo shows WARNING first, then CRITICAL (and weather-driven escalation).
-    prox_rule = safety_rules.evaluate_proximity(s["proximity_m"], s["weather"])
+    # Continuous dynamic-zone proximity evaluation: log once per escalation
+    # level so the demo shows WARNING first, then CRITICAL (and weather-driven
+    # escalation). TTC of a closing object can escalate the zone before the
+    # static radii are crossed.
+    prox_rule = safety_rules.evaluate_dynamic_proximity(
+        s["proximity_m"], s["weather"], s["closing_speed_mps"])
     new_level = prox_rule["severity"] if prox_rule else None
     if new_level != s["prox_level"]:
         if prox_rule:
@@ -69,6 +83,16 @@ def tick(db, operator_id: str) -> dict | None:
         s["prox_level"] = new_level
     elif prox_rule and s["prox_level"] == "CRITICAL":
         alert = alert or prox_rule  # keep the critical alert visible while in zone
+
+    # SIMULATED machine ground speed (km/h). The deterministic interlock
+    # brakes the machine to a halt while the surroundings are a DANGER zone.
+    if new_level == "CRITICAL":
+        s["speed_kmh"] = round(max(0.0, s["speed_kmh"] - 2.5), 1)
+    elif s["forced_idle"]:
+        s["speed_kmh"] = 0.0
+    else:
+        s["speed_kmh"] = round(min(8.0, max(0.5, s["speed_kmh"]
+                                              + rng.uniform(-0.8, 0.8))), 1)
     return snapshot(operator_id, alert)
 
 
@@ -77,6 +101,8 @@ def snapshot(operator_id: str, active_alert: dict | None = None) -> dict | None:
     if not s:
         return None
     f = safety_rules.CONDITION_FACTOR.get(s["weather"], 1.0)
+    zone = safety_rules.classify_zone(s["proximity_m"], s["weather"],
+                                      s["closing_speed_mps"])
     return {
         "operator_id": operator_id,
         "machine_id": s["machine_id"], "task_code": s["task_code"],
@@ -89,7 +115,14 @@ def snapshot(operator_id: str, active_alert: dict | None = None) -> dict | None:
         "proximity_warn_m": round(safety_rules.PROXIMITY_WARN_M * f, 1),
         "proximity_critical_m": round(safety_rules.PROXIMITY_CRITICAL_M * f, 1),
         "condition_factor": f,
-        "approaching": s["approach"],
+        "approaching": s["approach"] or s["vehicle_approach"],
+        # Dynamic Proximity Safety Zone + SIMULATED movement telemetry
+        "zone": zone["zone"],
+        "zone_reason": zone["reason"],
+        "ttc_s": zone["ttc_s"],
+        "closing_speed_mps": s["closing_speed_mps"],
+        "speed_kmh": s["speed_kmh"],
+        "movement_simulated": True,
         "elapsed_min": round((datetime.utcnow() - s["started"]).total_seconds() / 60, 1),
         "active_alert": active_alert,
         "simulated": True,
@@ -123,7 +156,8 @@ def simulate_event(db, operator_id: str, event_type: str,
         s["weather"] = weather
         # Re-evaluate proximity immediately: worsening conditions can escalate
         # an existing WARNING to CRITICAL (thresholds enlarge).
-        rule = safety_rules.evaluate_proximity(s["proximity_m"], weather)
+        rule = safety_rules.evaluate_dynamic_proximity(
+            s["proximity_m"], weather, s["closing_speed_mps"])
         new_level = rule["severity"] if rule else None
         inc_id = None
         if new_level != s["prox_level"]:
@@ -144,7 +178,10 @@ def simulate_event(db, operator_id: str, event_type: str,
         return {"ok": True, "alert": None, "snapshot": snapshot(operator_id)}
     if event_type == "proximity_hazard":
         s["proximity_m"] = 2.1
-        rule = safety_rules.evaluate_proximity(2.1, s["weather"])
+        s["approach"] = False
+        s["vehicle_approach"] = False
+        s["closing_speed_mps"] = None
+        rule = safety_rules.evaluate_dynamic_proximity(2.1, s["weather"])
         inc = _log_incident(db, s, rule, operator_id)
         s["prox_level"] = rule["severity"]
         return {"ok": True, "alert": rule, "incident_id": inc.id,
@@ -153,13 +190,27 @@ def simulate_event(db, operator_id: str, event_type: str,
         # Distance closes on every tick; rule engine logs WARNING then CRITICAL.
         s["proximity_m"] = min(s["proximity_m"], 9.5)
         s["approach"] = True
+        s["vehicle_approach"] = False
         return {"ok": True, "alert": None, "snapshot": snapshot(operator_id),
                 "note": "Person approaching: distance closes each tick; WARNING "
                         "then CRITICAL fire as weather-adjusted thresholds cross."}
+    if event_type == "vehicle_approaching":
+        # Fast-closing vehicle: the DYNAMIC zone escalates on time-to-contact
+        # well before the static distance radii are crossed.
+        s["proximity_m"] = min(s["proximity_m"], 14.0)
+        s["vehicle_approach"] = True
+        s["approach"] = False
+        return {"ok": True, "alert": None, "snapshot": snapshot(operator_id),
+                "note": "Vehicle approaching fast: closing speed drives the zone "
+                        "to CAUTION/DANGER via time-to-contact, beyond the "
+                        "static radii. Deterministic TTC rule, no LLM."}
     if event_type == "proximity_clear":
         s["proximity_m"] = 12.0
         s["approach"] = False
+        s["vehicle_approach"] = False
         s["prox_level"] = None
+        s["closing_speed_mps"] = None
+        s["speed_kmh"] = 3.0
         return {"ok": True, "alert": None, "snapshot": snapshot(operator_id)}
 
     if event_type in ("excessive_idling", "low_load", "fuel_anomaly"):

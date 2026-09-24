@@ -11,8 +11,8 @@ router = APIRouter(prefix="/api/safety", tags=["safety"])
 class SimulateRequest(BaseModel):
     operator_id: str
     event_type: str  # seatbelt_violation | seatbelt_fixed | proximity_hazard |
-                     # person_approaching | proximity_clear | weather_change |
-                     # excessive_idling | low_load | fuel_anomaly
+                     # person_approaching | vehicle_approaching | proximity_clear |
+                     # weather_change | excessive_idling | low_load | fuel_anomaly
     weather: str | None = None  # for weather_change: Sunny|Cloudy|Rainy|Windy|Fog|Night
 
 
