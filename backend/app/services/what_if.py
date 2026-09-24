@@ -174,19 +174,38 @@ def _top_factors(base_in: dict, scen_in: dict,
                       f"{base_in[best_field]} → {scen_in[best_field]}",
             "impact_min": round(best_delta, 1),
             "source": "model",
+            "effect": "time", "effect_label": "Time effect",
             "detail": ("Largest single model-input change (one-at-a-time "
                        "marginal effect on the model prediction; "
                        "interactions ignored). Model layer total: "
                        f"{model_layer:+.1f} min.")})
 
-    # 2) Workload change applied on top (source = simulated).
+    # 2) Workload change applied on top (source = simulated). This is a
+    # PRODUCTIVITY effect: it changes throughput, and the minutes shown are
+    # the resulting clock-time consequence — NOT necessarily "good" when
+    # negative, since overloading also carries a risk penalty.
     if scen_in["workload_pct"] != base_in["workload_pct"]:
         wl_delta = _total(scen_model_min, ws, ib) - _total(scen_model_min, wb, ib)
-        factors.append({
+        entry = {
             "factor": f"Workload: {wb:g}% → {ws:g}%",
             "impact_min": round(wl_delta, 1), "source": "simulated",
-            "detail": "Linear productivity assumption (simulated layer, "
-                      "not a model feature)."})
+            "effect": "productivity", "effect_label": "Productivity effect",
+            "detail": (("Higher" if ws > wb else "Lower") +
+                       " workload changes throughput, so the same productive "
+                       "work takes " +
+                       ("less" if ws > wb else "more") +
+                       " clock time (linear prototype assumption, not a "
+                       "model feature)."),
+        }
+        if ws > OVERLOAD_PCT:
+            # Time saving vs risk penalty must be distinguishable.
+            entry["risk_note"] = (
+                f"Risk effect: {ws:g}% workload is above the "
+                f"{OVERLOAD_PCT:g}% normal band — the time saving comes "
+                "with an OVERLOAD RISK penalty (component-wear heuristic), "
+                "so a negative minute contribution here is NOT an "
+                "improvement.")
+        factors.append(entry)
 
     # 3) Idle change applied last (source = simulated).
     if scen_in["idle_pct"] != base_in["idle_pct"]:
@@ -194,6 +213,7 @@ def _top_factors(base_in: dict, scen_in: dict,
         factors.append({
             "factor": f"Idle time: {ib:g}% → {is_:g}%",
             "impact_min": round(idle_delta, 1), "source": "simulated",
+            "effect": "time", "effect_label": "Time effect",
             "detail": "Idle share stretches total clock time (simulated "
                       "layer, not a model feature)."})
 

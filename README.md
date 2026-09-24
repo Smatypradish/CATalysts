@@ -80,7 +80,7 @@ CAT-Operator-Companion/
     run.py                  # start server (seeds DB + trains model on boot)
     seed.py                 # verbatim CSV loads + provenance integrity check
     generate_task_records_100.py  # documented generator: 5 originals + 95 synthetic
-    smoke_test.py           # 40-check end-to-end demo flow + dataset/zone/what-if integrity test
+    smoke_test.py           # 42-check end-to-end demo flow + dataset/zone/what-if integrity test
     app/
       main.py, database.py, models.py
       routers/              # auth, dashboard, tasks, prediction, safety,

@@ -227,6 +227,20 @@ check("top factors attributed with provenance",
       len(worse["comparison"]["top_factors"]) >= 1 and all(
           f["source"] in ("model", "simulated")
           for f in worse["comparison"]["top_factors"]))
+
+# Effect-dimension labels: a workload increase that saves minutes but crosses
+# the overload band must be tagged "productivity" AND carry a risk note, so a
+# negative minute contribution is not mistaken for an improvement.
+wl_factor = next(f for f in worse["comparison"]["top_factors"]
+                 if f["factor"].startswith("Workload"))
+check("workload factor: productivity effect + overload risk note",
+      wl_factor["effect"] == "productivity"
+      and wl_factor["impact_min"] < 0
+      and "OVERLOAD RISK" in wl_factor["risk_note"])
+check("time-effect factors labelled",
+      all(f.get("effect") == "time" for f in worse["comparison"]["top_factors"]
+          if f["factor"].startswith(("Idle", "Weather", "Task", "Operator",
+                                     "Machine"))))
 check("assumptions + provenance documented in response",
       "assumptions" in worse["provenance"]
       and "NOT real CAT" in worse["provenance"]["simulated"])

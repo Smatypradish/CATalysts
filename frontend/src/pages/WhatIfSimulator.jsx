@@ -58,6 +58,21 @@ function ResultRow({ label, badge, value, sub }) {
 
 const outcomeTone = { LOW: 'SAFE', MEDIUM: 'WARNING', HIGH: 'CRITICAL' };
 
+// Effect-dimension tags: productivity (throughput) vs clock-time, plus an
+// amber Risk note when a time saving comes with an overload penalty.
+const effectCls = {
+  productivity: 'border-sky-500/50 text-sky-300',
+  time: 'border-zinc-500/60 text-zinc-300',
+};
+
+function EffectTag({ kind, label }) {
+  return (
+    <span className={`inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-semibold shrink-0 ${effectCls[kind] || effectCls.time}`}>
+      {label}
+    </span>
+  );
+}
+
 function ScenarioCard({ title, accent, inputs, onChange, result, opts, onCopy }) {
   const set = (k) => (v) => onChange({ ...inputs, [k]: v });
   return (
@@ -240,17 +255,27 @@ export default function WhatIfSimulator() {
             <FlaskConical size={16} /> Top factors behind the change
           </h3>
           <p className="text-xs text-zinc-500 mb-3">
-            Contributions sum to the total duration change (model layer → workload → idle).
-            Model factors are one-at-a-time marginal effects.
+            Each factor is tagged by what it changes: <b className="text-sky-300">Productivity effect</b> (throughput),{' '}
+            <b className="text-zinc-300">Time effect</b> (clock time) — minute contributions sum to the total
+            duration change. A <b className="text-amber-300">Risk effect</b> note appears when a time saving
+            comes with an overload penalty, so negative minutes are not automatically "better".
           </p>
           <ul className="space-y-2">
             {cmp.top_factors.map((f, i) => (
               <li key={i} className="text-sm flex items-start gap-2">
-                <span className={`font-semibold shrink-0 ${f.impact_min > 0 ? 'text-red-300' : f.impact_min < 0 ? 'text-emerald-300' : 'text-zinc-400'}`}>
+                <span className={`font-semibold shrink-0 ${f.risk_note ? 'text-amber-300' : f.impact_min > 0 ? 'text-red-300' : f.impact_min < 0 ? 'text-emerald-300' : 'text-zinc-400'}`}>
                   {f.impact_min > 0 ? '+' : ''}{f.impact_min} min
                 </span>
                 {f.source === 'model' ? ML : SIM}
-                <span><b>{f.factor}</b> — {f.detail}</span>
+                {f.effect && <EffectTag kind={f.effect} label={f.effect_label} />}
+                <span>
+                  <b>{f.factor}</b> — {f.detail}
+                  {f.risk_note && (
+                    <span className="flex items-start gap-1 text-xs text-amber-300 mt-0.5">
+                      <TriangleAlert size={12} className="mt-0.5 shrink-0" /> {f.risk_note}
+                    </span>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
